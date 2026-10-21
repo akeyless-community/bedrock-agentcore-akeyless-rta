@@ -24,13 +24,11 @@ agentcore configure -e examples/mcp-server/server.py --protocol MCP
 agentcore deploy
 ```
 
-Install dependency (once on PyPI, or path/editable for local testing):
+Install from PyPI (AgentCore packaging prefers wheels over `git+https`):
 
 ```text
-akeyless-agentcore-rta[mcp]
+akeyless-agentcore-rta[mcp]>=0.1.0
 ```
-
-Until published, vendor the package into the agent image or install from a private index / local path your build allows (AgentCore `uv` may reject `git+https` source builds — prefer a wheel).
 
 ## After deploy
 
