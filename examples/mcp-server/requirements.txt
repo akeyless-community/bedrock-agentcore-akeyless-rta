@@ -1,0 +1,1 @@
+akeyless-agentcore-rta[mcp]>=0.1.0

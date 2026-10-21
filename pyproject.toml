@@ -1,0 +1,54 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "akeyless-agentcore-rta"
+version = "0.1.0"
+description = "Akeyless Agentic Runtime Authority (RTA/ARA) for AWS Bedrock AgentCore — secretless DB and cloud actions"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+authors = [{ name = "Akeyless Community" }]
+keywords = ["akeyless", "bedrock", "agentcore", "ara", "rta", "runtime-authority", "aws"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+]
+dependencies = [
+    "akeyless>=5.0.0",
+    "akeyless-cloud-id>=0.3.1",
+]
+
+[project.optional-dependencies]
+mcp = [
+    # FastMCP lives in mcp 1.x; mcp 2.x renames it to MCPServer.
+    "mcp>=1.9.0,<2",
+]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
+]
+all = [
+    "mcp>=1.9.0,<2",
+]
+
+[project.scripts]
+akeyless-agentcore-rta-mcp = "akeyless_agentcore_rta.tools.mcp:run_mcp_server"
+
+[project.urls]
+Homepage = "https://github.com/akeyless-community/bedrock-agentcore-akeyless-rta"
+Repository = "https://github.com/akeyless-community/bedrock-agentcore-akeyless-rta"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/akeyless_agentcore_rta"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
