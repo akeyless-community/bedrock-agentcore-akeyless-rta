@@ -75,6 +75,11 @@ python examples/mcp-server/server.py
 | [Akeyless setup](docs/AKEYLESS_SETUP.md) | Auth method, ARA RBAC, chicken-and-egg IAM bind |
 | [AgentCore deploy](docs/AGENTCORE_DEPLOY.md) | MCP protocol, envVars, invoke |
 | [Security](SECURITY.md) | Checklist |
+| [Maintainer guide](docs/MAINTAINER.md) | Branch protection, approvals, PyPI environment |
+| [Publishing to PyPI](docs/PYPI_PUBLISHING.md) | Trusted publishing setup |
+| [Contributing](CONTRIBUTING.md) | Development setup |
+
+**Repository:** [github.com/akeyless-community/bedrock-agentcore-akeyless-rta](https://github.com/akeyless-community/bedrock-agentcore-akeyless-rta)
 
 ## Development
 
@@ -85,6 +90,7 @@ pytest
 
 Run pytest **inside this package directory** so the workspace root does not collect unrelated tests.
 
-## Status
+## Related
 
-Local / pre-publish. Create the GitHub repo under `akeyless-community` when ready; PyPI publish is optional after first release.
+- Secrets at runtime (values in agent): [`akeyless-agentcore-runtime`](https://github.com/akeyless-community/bedrock-agentcore-akeyless-runtime)
+- Product docs: [Agentic Runtime Authority](https://docs.akeyless.io/docs/agentic-runtime-authority)
