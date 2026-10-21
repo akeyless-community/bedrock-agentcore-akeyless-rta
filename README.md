@@ -19,7 +19,27 @@ Agents call **list-secrets**, **query-db**, **service-execute**, and **list-sub-
 - Akeyless **Gateway with ARA enabled** (not `api.akeyless.io`)
 - Auth method your AgentCore role can use (production: AWS IAM cloud identity)
 
-## Install (local)
+## Install
+
+**No git clone needed.** Add to your agent project and install with pip.
+
+### From PyPI (recommended)
+
+Package: [akeyless-agentcore-rta on PyPI](https://pypi.org/project/akeyless-agentcore-rta/)
+
+```bash
+pip install akeyless-agentcore-rta
+# MCP server extras:
+pip install "akeyless-agentcore-rta[mcp]"
+```
+
+Add to your AgentCore `requirements.txt` / `pyproject.toml`:
+
+```text
+akeyless-agentcore-rta[mcp]>=0.1.0
+```
+
+### From source (contributors)
 
 ```bash
 cd bedrock-agentcore-akeyless-rta
