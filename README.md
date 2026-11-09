@@ -1,17 +1,8 @@
-# akeyless-agentcore-rta
+# Akeyless Agentic Runtime Authority for Amazon Bedrock AgentCore
 
-[Akeyless Agentic Runtime Authority (ARA / RTA)](https://docs.akeyless.io/docs/agentic-runtime-authority) for [AWS Bedrock AgentCore](https://aws.amazon.com/bedrock/agentcore/).
+Python library and Model Context Protocol (MCP) server that gives Amazon Bedrock AgentCore agents access to protected resources through [Akeyless Agentic Runtime Authority (ARA)](https://docs.akeyless.io/docs/agentic-runtime-authority). AI agents can query databases, run actions on AWS, Azure, GCP and Kubernetes, and execute commands on Linux (SSH), Windows (WinRM) and LDAP / Active Directory servers, authenticating to the Akeyless Gateway with their AWS IAM role.
 
-Agents call **list-secrets**, **query-db**, **service-execute**, and **list-sub-tools**. Credentials stay on your **Akeyless Gateway** — tool responses contain paths, metadata, and query/action results only.
-
-**Not the secrets-fetch library.** For `get_secret()` / pulling secret *values* into the agent, use [`akeyless-agentcore-runtime`](https://github.com/akeyless-community/bedrock-agentcore-akeyless-runtime). You can use both in one architecture (bootstrap via secrets runtime; DB/cloud via this package).
-
-| Concern | This package (RTA) | Secrets runtime |
-|---------|-------------------|-----------------|
-| Goal | Do work with secrets | Fetch secret values |
-| Tools | list-secrets, query-db, service-execute, list-sub-tools | list / get secret |
-| Credentials in agent | Never | Yes (values returned) |
-| Gateway | **Required** customer GW with ARA | SaaS API or GW OK |
+AgentCore orchestrates. Akeyless holds the credentials. **Secret values never enter the agent or the model context.**
 
 ## Requirements
 
@@ -67,6 +58,50 @@ python examples/mcp-server/server.py
 | `AKEYLESS_DEFAULT_SECRET_NAME` | No | Optional default path for execute tools |
 
 \* Or `AKEYLESS_TOKEN` for a pre-issued session token.
+
+## Architecture
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant C as Claude Desktop
+    participant M as akeyless-claude-mcp
+    participant A as Akeyless API
+    participant G as Akeyless Gateway
+    participant L as AI Quorum (LLMs)
+    participant R as Database / Cloud
+
+    U->>C: "Query prod postgres for user count"
+    C->>M: list-secrets
+    M->>A: list-items (authenticated, role-scoped)
+    A-->>M: secret paths + target types (no values)
+    M-->>C: /prod/db/postgres-ro
+    C->>M: query-db (path + SQL)
+    M->>G: POST /config/target_query
+    Note over G: 1. RBAC: ARA execute permission on path
+    Note over G: 2. Input rules (read-only, no multi-statement...)
+    alt Input rule violated
+        G-->>M: BLOCKED (never reaches target)
+    end
+    opt AI Quorum enabled
+        G->>L: validate action
+        L-->>G: verdicts (any deny = block)
+        alt Any model denies
+            G-->>M: BLOCKED
+        end
+    end
+    Note over G: 3. Fetch JIT/rotated credential (stays in GW)
+    G->>R: execute with credential
+    R-->>G: raw results
+    Note over G: 4. Output rules (PII, secrets...)
+    alt Output rule violated
+        G-->>M: BLOCKED / redacted
+    end
+    G-->>M: JSON results (no credentials)
+    M-->>C: { count: 42 }
+    C-->>U: "There are 42 users"
+    Note over G: ARA session recorded for audit
+```
 
 ## Docs
 
