@@ -64,8 +64,8 @@ python examples/mcp-server/server.py
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant C as Claude Desktop
-    participant M as akeyless-claude-mcp
+    participant C as Bedrock Agentcore
+    participant M as akeyless-mcp
     participant A as Akeyless API
     participant G as Akeyless Gateway
     participant L as AI Quorum (LLMs)
