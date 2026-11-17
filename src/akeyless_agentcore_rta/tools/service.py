@@ -46,8 +46,9 @@ class AraToolService:
                     "count": len(summaries),
                     "secrets": summaries,
                     "note": (
-                        "Use query-db for database secrets or service-execute for "
-                        "cloud/K8s/GitHub/custom-MCP secrets."
+                        "Use query-db for database secrets, or service-execute for "
+                        "cloud/K8s/GitHub/custom-MCP secrets and for remote commands on "
+                        "SSH, Windows, RDP, LDAP, linked, and SSH certificate issuer items."
                         if summaries
                         else "No ARA secrets matched. Check Gateway ARA setup and role ara_allow_access."
                     ),
@@ -146,5 +147,14 @@ class AraToolService:
             data = result.to_dict()
             data["note"] = "Use service-execute with a payload that invokes the desired sub-tool."
             return ToolResponse(ok=True, data=data)
+        except OAuthAuthorizationRequiredError as exc:
+            return ToolResponse(
+                ok=False,
+                data={
+                    "authorization_url": exc.authorization_url,
+                    "state": exc.state,
+                },
+                error=format_oauth_required_message(exc, "list-sub-tools"),
+            )
         except Exception as exc:
             return ToolResponse(ok=False, data={}, error=str(exc))

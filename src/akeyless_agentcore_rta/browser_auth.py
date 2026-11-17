@@ -9,14 +9,17 @@ import json
 import platform
 import subprocess
 import threading
+import urllib.error
 import urllib.parse
+import urllib.request
 import webbrowser
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from typing import Literal
+from typing import Any, Literal
 from urllib.parse import parse_qs, urlparse
 
 AUTH_TIMEOUT_SECONDS = 120
+EXCHANGE_TIMEOUT_SECONDS = 10
 AccessBrowserType = Literal["saml", "oidc"]
 
 
@@ -44,6 +47,9 @@ def build_auth_url(
             "access_id": access_id,
             "redirect_uri": redirect_uri,
             "is_use_short_token": "true",
+            # The callback gets a one-time auth_code instead of the credentials,
+            # like the CLI (auth.ResponseModeAuthCode); see exchange_auth_code.
+            "response_mode": "auth_code",
             "product": "ara",
         }
     )
@@ -64,6 +70,34 @@ def _parse_creds_param(creds: str) -> BrowserAuthResult:
         creds=creds_obj if isinstance(creds_obj, dict) else None,
         expiration=str(expiration) if expiration is not None else None,
     )
+
+
+def exchange_auth_code(
+    auth_base_url: str,
+    auth_code: str,
+    *,
+    opener: Any | None = None,
+) -> BrowserAuthResult:
+    """Exchange the callback's one-time auth code for a token through the gateway's
+    ``/api/exchange-auth-code`` (Go: ``ExchangeAuthCodeViaGateway``)."""
+    url = f"{auth_base_url.rstrip('/')}/api/exchange-auth-code"
+    request = urllib.request.Request(
+        url,
+        data=json.dumps({"auth_code": auth_code}).encode("utf-8"),
+        headers={"Content-Type": "application/json", "Accept": "application/json"},
+        method="POST",
+    )
+    do_open = opener or urllib.request.urlopen
+    try:
+        with do_open(request, timeout=EXCHANGE_TIMEOUT_SECONDS) as response:
+            out = json.loads(response.read().decode("utf-8") or "{}")
+    except urllib.error.HTTPError as exc:
+        raise RuntimeError(f"Auth code exchange failed ({exc.code})") from exc
+    token = out.get("token") if isinstance(out, dict) else None
+    expires_at = out.get("expires_at") if isinstance(out, dict) else None
+    if not isinstance(token, str) or not token.strip() or not expires_at:
+        raise RuntimeError("Auth code exchange did not return a token")
+    return BrowserAuthResult(token=token.strip(), expiration=str(int(expires_at) * 1000))
 
 
 def _open_browser(url: str) -> None:
@@ -113,6 +147,20 @@ def authenticate_with_browser(
                     f"<p><strong>Authentication failed.</strong> {error}</p>",
                 )
                 result_box["value"] = RuntimeError(f"Authentication failed: {error}")
+                done.set()
+                return
+
+            auth_code = (params.get("auth_code") or [None])[0]
+            if auth_code:
+                try:
+                    result_box["value"] = exchange_auth_code(auth_base_url, auth_code)
+                    self._write_html(
+                        200,
+                        "<p><strong>Authentication succeeded.</strong> You may close this tab and return to the agent.</p>",
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    self._write_html(400, "<p><strong>Authentication failed.</strong> Invalid auth code</p>")
+                    result_box["value"] = RuntimeError(str(exc))
                 done.set()
                 return
 

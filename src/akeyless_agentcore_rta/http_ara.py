@@ -10,6 +10,11 @@ from typing import Any
 
 from akeyless_agentcore_rta.ara import OAuthAuthorizationRequiredError
 
+# Outlasts the gateway's ARA write deadline (210 s request + 30 s), like the
+# CLI's target-query client, so a long remote command returns the gateway's
+# own result or timeout error instead of failing client-side while it runs.
+ARA_REQUEST_TIMEOUT_SECONDS = 270
+
 
 @dataclass
 class TargetQueryResult:
@@ -96,7 +101,7 @@ def post_ara_json(
 
     do_open = opener or urllib.request.urlopen
     try:
-        with do_open(request, timeout=120) as response:
+        with do_open(request, timeout=ARA_REQUEST_TIMEOUT_SECONDS) as response:
             text = response.read().decode("utf-8")
             status = getattr(response, "status", None) or response.getcode()
     except urllib.error.HTTPError as exc:

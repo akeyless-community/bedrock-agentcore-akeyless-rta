@@ -36,12 +36,21 @@ ARA_SERVICE_PRODUCER_TYPES = frozenset(
     }
 )
 
+# Kinds executed as a remote command on a host over SSH or WinRM (Go:
+# types.ARARemoteProducerTypes): the producer type of a dynamic secret (rdp,
+# ldap) or the target type of a rotated secret (ssh, windows, ldap, linked).
+ARA_REMOTE_PRODUCER_TYPES = frozenset({"ssh", "windows", "rdp", "ldap", "linked"})
+
+# secret_type of an SSH certificate issuer (Go: types.ARASecretTypeSSHCertIssuer).
+SSH_CERT_ISSUER_SECRET_TYPE = "ssh-cert-issuer"
+
 # Synthetic label for static-secret custom MCP configs (Go: CustomMCPTargetType).
 CUSTOM_MCP_TARGET_TYPE = "custom-mcp"
 
-ARA_LIST_ITEM_TYPES = ["dynamic-secret", "rotated-secret", "static-secret"]
+# Go: types.ARAItemTypes.
+ARA_LIST_ITEM_TYPES = ["dynamic-secret", "rotated-secret", "static-secret", "ssh-cert-issuer"]
 
-SecretTypeLabel = Literal["dynamic-secret", "rotated-secret", "static-secret"]
+SecretTypeLabel = Literal["dynamic-secret", "rotated-secret", "static-secret", "ssh-cert-issuer"]
 
 
 def is_ara_db_producer_type(producer_type: str) -> bool:
@@ -53,9 +62,18 @@ def is_ara_service_producer_type(producer_type: str) -> bool:
     return normalized in ARA_SERVICE_PRODUCER_TYPES or normalized == CUSTOM_MCP_TARGET_TYPE
 
 
+def is_ara_remote_producer_type(producer_type: str) -> bool:
+    """Remote items run one command (or file transfer) on a host; they go through service-execute."""
+    return producer_type.lower() in ARA_REMOTE_PRODUCER_TYPES
+
+
 def is_ara_supported_producer_type(producer_type: str) -> bool:
     normalized = producer_type.lower()
-    return normalized in ARA_DB_PRODUCER_TYPES or normalized in ARA_SERVICE_PRODUCER_TYPES
+    return (
+        normalized in ARA_DB_PRODUCER_TYPES
+        or normalized in ARA_SERVICE_PRODUCER_TYPES
+        or normalized in ARA_REMOTE_PRODUCER_TYPES
+    )
 
 
 def normalize_item_type(raw: str | None) -> str:
@@ -200,6 +218,19 @@ def map_ara_secrets(items: list[Any]) -> list[AraSecretSummary]:
                     description=description,
                 )
             )
+            continue
+
+        if item_type == SSH_CERT_ISSUER_SECRET_TYPE:
+            # Commands run over SSH with a certificate signed for the call
+            # (Go: ListARASecrets SSHCertIssuer case).
+            results.append(
+                AraSecretSummary(
+                    name=name,
+                    secret_type=SSH_CERT_ISSUER_SECRET_TYPE,
+                    target_type="ssh",
+                    description=description,
+                )
+            )
 
     results.sort(key=lambda s: s.name)
     return results
@@ -214,10 +245,18 @@ class OAuthAuthorizationRequiredError(Exception):
         super().__init__(f"OAuth authorization required: {authorization_url}")
 
 
-def format_oauth_required_message(error: OAuthAuthorizationRequiredError) -> str:
+def format_oauth_required_message(
+    error: OAuthAuthorizationRequiredError, tool_name: str | None = None
+) -> str:
+    """Worded like the Go handlers: list-sub-tools has no auth-code or state, so it points at service-execute."""
+    next_step = (
+        "then call service-execute with the auth-code and state parameters to complete the flow."
+        if tool_name == "list-sub-tools"
+        else "then call this tool again with the auth-code and state parameters."
+    )
     return (
         "This secret requires OAuth authorization. "
         "Please open the following URL in your browser to authorize, "
-        "then call this tool again with the auth-code and state parameters.\n\n"
+        f"{next_step}\n\n"
         f"Authorization URL: {error.authorization_url}\nState: {error.state}"
     )
