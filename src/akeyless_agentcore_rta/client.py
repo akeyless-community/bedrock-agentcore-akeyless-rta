@@ -10,9 +10,6 @@ import akeyless
 from akeyless_agentcore_rta.ara import (
     ARA_LIST_ITEM_TYPES,
     AraSecretSummary,
-    is_ara_db_producer_type,
-    is_ara_remote_producer_type,
-    is_ara_service_producer_type,
     map_ara_secrets,
 )
 from akeyless_agentcore_rta.auth import (
@@ -95,13 +92,6 @@ class AkeylessRtaClient:
             )
         return name
 
-    def _find_listed_secret(self, secret_name: str) -> AraSecretSummary | None:
-        try:
-            secrets = self.list_secrets()
-        except Exception:
-            return None
-        return next((s for s in secrets if s.name == secret_name), None)
-
     def query_db(
         self,
         payload: str,
@@ -115,11 +105,6 @@ class AkeylessRtaClient:
     ) -> TargetQueryResult:
         """Run a database query via Gateway ARA (credentials never returned)."""
         resolved = self._resolve_secret_name(secret_name)
-        listed = self._find_listed_secret(resolved)
-        if listed and listed.target_type and not is_ara_db_producer_type(listed.target_type):
-            raise ValueError(
-                f'Secret "{resolved}" is not a database secret. Use service_execute instead.'
-            )
         return self._execute_target_query(
             secret_name=resolved,
             payload=payload,
@@ -147,16 +132,6 @@ class AkeylessRtaClient:
         ``{"tool":"run","arguments":{"command":"uptime","host":"web1","cwd":"/"}}``.
         """
         resolved = self._resolve_secret_name(secret_name)
-        listed = self._find_listed_secret(resolved)
-        if (
-            listed
-            and listed.target_type
-            and not is_ara_service_producer_type(listed.target_type)
-            and not is_ara_remote_producer_type(listed.target_type)
-        ):
-            raise ValueError(
-                f'Secret "{resolved}" is not a service secret or remote item. Use query_db instead.'
-            )
         return self._execute_target_query(
             secret_name=resolved,
             payload=payload,

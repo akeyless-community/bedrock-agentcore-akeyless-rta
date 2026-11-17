@@ -80,6 +80,8 @@ python examples/mcp-server/server.py
 # AgentCore: protocol MCP → examples/mcp-server/server.py
 ```
 
+The MCP tools (`list-secrets`, `query-db`, `service-execute`, `list-sub-tools`) have the same names, parameters (`secret-name`, `payload`, `agent-id`, `original-user`, `original-prompt`, `auth-code`, `state`), required fields and descriptions as `akeyless mcp-runtime-authority`. The Gateway picks how to run each call from the item type.
+
 ## Environment
 
 | Variable | Required | Notes |

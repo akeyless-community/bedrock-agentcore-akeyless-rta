@@ -95,3 +95,67 @@ class TestExchangeAuthCode:
 
         with pytest.raises(RuntimeError, match=r"Auth code exchange failed \(401\)"):
             exchange_auth_code("https://gw.example.com:8000", "bad", opener=opener)
+
+
+class TestCallbackAuthCode:
+    """Runs the real callback server and sends the browser's redirect to it."""
+
+    @staticmethod
+    def _free_port() -> int:
+        import socket
+
+        with socket.socket() as s:
+            s.bind(("127.0.0.1", 0))
+            return s.getsockname()[1]
+
+    def _login(self, monkeypatch, query: str, exchange):
+        import urllib.request
+
+        from akeyless_agentcore_rta import browser_auth
+
+        port = self._free_port()
+        seen: dict = {}
+
+        def fake_browser(url):
+            try:
+                with urllib.request.urlopen(f"http://127.0.0.1:{port}/?{query}", timeout=5) as resp:
+                    seen["status"], seen["body"] = resp.status, resp.read().decode()
+            except urllib.error.HTTPError as exc:
+                seen["status"], seen["body"] = exc.code, exc.read().decode()
+
+        monkeypatch.setattr(browser_auth, "_open_browser", fake_browser)
+        monkeypatch.setattr(browser_auth, "exchange_auth_code", exchange)
+        try:
+            return browser_auth.authenticate_with_browser(
+                access_type="oidc",
+                auth_base_url="https://gw.example.com:8000",
+                access_id="p-test",
+                port=port,
+            ), seen
+        except Exception as exc:  # noqa: BLE001
+            return exc, seen
+
+    def test_auth_code_success(self, monkeypatch):
+        from akeyless_agentcore_rta.browser_auth import BrowserAuthResult
+
+        calls = []
+
+        def exchange(base, code):
+            calls.append((base, code))
+            return BrowserAuthResult(token="t-short", expiration="1900000000000")
+
+        result, seen = self._login(monkeypatch, "auth_code=code-1", exchange)
+        assert calls == [("https://gw.example.com:8000", "code-1")]
+        assert result.token == "t-short"
+        assert seen["status"] == 200
+        assert "Authentication succeeded" in seen["body"]
+
+    def test_auth_code_rejected(self, monkeypatch):
+        def exchange(base, code):
+            raise RuntimeError("Auth code exchange failed (401)")
+
+        result, seen = self._login(monkeypatch, "auth_code=bad", exchange)
+        assert isinstance(result, RuntimeError)
+        assert str(result) == "Auth code exchange failed (401)"
+        assert seen["status"] == 400
+        assert "Invalid auth code" in seen["body"]

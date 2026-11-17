@@ -147,5 +147,14 @@ class AraToolService:
             data = result.to_dict()
             data["note"] = "Use service-execute with a payload that invokes the desired sub-tool."
             return ToolResponse(ok=True, data=data)
+        except OAuthAuthorizationRequiredError as exc:
+            return ToolResponse(
+                ok=False,
+                data={
+                    "authorization_url": exc.authorization_url,
+                    "state": exc.state,
+                },
+                error=format_oauth_required_message(exc, "list-sub-tools"),
+            )
         except Exception as exc:
             return ToolResponse(ok=False, data={}, error=str(exc))

@@ -245,10 +245,18 @@ class OAuthAuthorizationRequiredError(Exception):
         super().__init__(f"OAuth authorization required: {authorization_url}")
 
 
-def format_oauth_required_message(error: OAuthAuthorizationRequiredError) -> str:
+def format_oauth_required_message(
+    error: OAuthAuthorizationRequiredError, tool_name: str | None = None
+) -> str:
+    """Worded like the Go handlers: list-sub-tools has no auth-code or state, so it points at service-execute."""
+    next_step = (
+        "then call service-execute with the auth-code and state parameters to complete the flow."
+        if tool_name == "list-sub-tools"
+        else "then call this tool again with the auth-code and state parameters."
+    )
     return (
         "This secret requires OAuth authorization. "
         "Please open the following URL in your browser to authorize, "
-        "then call this tool again with the auth-code and state parameters.\n\n"
+        f"{next_step}\n\n"
         f"Authorization URL: {error.authorization_url}\nState: {error.state}"
     )

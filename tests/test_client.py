@@ -23,6 +23,24 @@ def _client(**kwargs) -> AkeylessRtaClient:
     )
 
 
+class _JsonResp:
+    def __init__(self, payload: dict):
+        self._data = json.dumps(payload).encode()
+        self.status = 200
+
+    def read(self):
+        return self._data
+
+    def getcode(self):
+        return 200
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+
 class TestListSecrets:
     def test_returns_metadata_only(self):
         client = _client()
@@ -105,39 +123,18 @@ class TestExecute:
         assert result.results == [{"n": 1}]
         assert result.target_type == "postgres"
 
-    def test_rejects_service_secret_for_query_db(self):
-        client = _client()
-        client._api.list_items.return_value = SimpleNamespace(
-            items=[
-                {
-                    "item_name": "/svc/aws",
-                    "item_type": "dynamic-secret",
-                    "client_permissions": ["ara_allow_access"],
-                    "dynamic_secret_producer_details": {"producer_type": "aws"},
-                }
-            ]
-        )
-        with pytest.raises(ValueError, match="not a database secret"):
-            client.query_db("list buckets", secret_name="/svc/aws")
+    def test_query_db_forwards_any_item_without_listing(self):
+        """No client-side type check: the Gateway picks the executor, like the Go MCP."""
+        captured: dict = {}
 
+        def opener(request, timeout=None):  # noqa: ARG001
+            captured["body"] = json.loads(request.data.decode())
+            return _JsonResp({"target_type": "aws", "results": []})
 
-class _JsonResp:
-    def __init__(self, payload: dict):
-        self._data = json.dumps(payload).encode()
-        self.status = 200
-
-    def read(self):
-        return self._data
-
-    def getcode(self):
-        return 200
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        return False
-
+        client = _client(_http_opener=opener)
+        client.query_db("list buckets", secret_name="/svc/aws")
+        assert captured["body"]["secret_name"] == "/svc/aws"
+        client._api.list_items.assert_not_called()
 
 class TestRemoteCommands:
     @pytest.mark.parametrize(
@@ -171,20 +168,18 @@ class TestRemoteCommands:
         assert captured["timeout"] == 270
         assert result.results[0]["exit_code"] == 0
 
-    def test_query_db_points_remote_items_to_service_execute(self):
-        client = _client()
-        client._api.list_items.return_value = SimpleNamespace(
-            items=[
-                {
-                    "item_name": "/srv/ssh",
-                    "item_type": "rotated-secret",
-                    "client_permissions": ["ara_allow_access"],
-                    "item_targets_assoc": [{"target_type": "ssh"}],
-                }
-            ]
-        )
-        with pytest.raises(ValueError, match="Use service_execute instead"):
-            client.query_db("uptime", secret_name="/srv/ssh")
+    def test_query_db_on_remote_item_goes_to_gateway(self):
+        captured: dict = {}
+
+        def opener(request, timeout=None):  # noqa: ARG001
+            captured["body"] = json.loads(request.data.decode())
+            return _JsonResp({"target_type": "ssh", "results": [{"stdout": "up", "exit_code": 0}]})
+
+        client = _client(_http_opener=opener)
+        result = client.query_db("uptime", secret_name="/srv/ssh")
+        assert captured["body"]["payload"] == "uptime"
+        assert result.results[0]["exit_code"] == 0
+        client._api.list_items.assert_not_called()
 
     def test_list_secrets_requests_ssh_cert_issuers(self):
         client = _client()
