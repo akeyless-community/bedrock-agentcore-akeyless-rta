@@ -2,7 +2,7 @@
 
 ## Pattern
 
-Deploy this package as an AgentCore Runtime with **`protocol: MCP`**. Agents discover tools (`list-secrets`, `query-db`, `service-execute`, `list-sub-tools`) over MCP. The process authenticates to your Akeyless Gateway and executes ARA calls server-side.
+Deploy this package as an AgentCore Runtime with **`protocol: MCP`**. Agents discover tools (`list-secrets`, `query-db`, `service-execute`, `list-sub-tools`) over MCP; `service-execute` also runs remote commands on SSH, Windows, and LDAP items (Gateway 5.6.0+). The process authenticates to your Akeyless Gateway and executes ARA calls server-side.
 
 ## Bootstrap envVars
 

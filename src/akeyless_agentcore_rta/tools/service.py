@@ -46,8 +46,9 @@ class AraToolService:
                     "count": len(summaries),
                     "secrets": summaries,
                     "note": (
-                        "Use query-db for database secrets or service-execute for "
-                        "cloud/K8s/GitHub/custom-MCP secrets."
+                        "Use query-db for database secrets, or service-execute for "
+                        "cloud/K8s/GitHub/custom-MCP secrets and for remote commands on "
+                        "SSH, Windows, RDP, LDAP, linked, and SSH certificate issuer items."
                         if summaries
                         else "No ARA secrets matched. Check Gateway ARA setup and role ara_allow_access."
                     ),

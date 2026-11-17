@@ -32,6 +32,42 @@ rows = client.query_db("SELECT 1", secret_name="/prod/db/readonly")
 print(rows.results)
 ```
 
+## Remote commands (SSH, Windows, LDAP)
+
+`service_execute` (MCP: `service-execute`) also runs one non-interactive command on a remote host, with the credentials of the item you name. The Gateway decides how to run it from the item's target type:
+
+| Item | `target_type` in list-secrets | Runs over |
+|---|---|---|
+| Rotated secret on an SSH target | `ssh` | SSH |
+| Rotated secret on a Windows target | `windows` | WinRM |
+| Rotated secret on a linked target | `linked` | SSH or WinRM, on one of the linked hosts |
+| RDP dynamic secret | `rdp` | SSH or WinRM, as the temporary user |
+| LDAP (Active Directory) rotated or dynamic secret | `ldap` | WinRM over HTTPS, as the domain user |
+| SSH certificate issuer (`secret_type: ssh-cert-issuer`) | `ssh` | SSH, with a short-lived certificate signed for the call |
+
+```python
+out = client.service_execute("uptime", secret_name="/servers/web-ssh")
+print(out.results[0]["stdout"], out.results[0]["exit_code"])
+
+out = client.service_execute(
+    '{"tool":"run","arguments":{"command":"ls","host":"web1.corp","cwd":"/var/log"}}',
+    secret_name="/servers/web-ssh",
+)
+```
+
+The payload is either a plain command line (`uptime`, `Get-Service`) or a sub-tool call for anything else:
+
+```json
+{"tool":"run","arguments":{"command":"systemctl status nginx","host":"web1.corp","cwd":"/var/log"}}
+```
+
+- `run` takes `command`, plus optional `host` (required when the item has more than one host; the error lists them), `cwd`, `shell` (`powershell` or `cmd`, WinRM only), `host_key_fingerprint` (`SHA256:<base64>`, SSH only), and `remote_user` (SSH certificate issuers only).
+- `upload` (`remote_path`, base64 `content`, at most 512 KB) and `download` (`remote_path`) move one file.
+- A run returns `stdout`, `stderr`, `exit_code`, `truncated`, and, when sent with `cwd` or run in PowerShell, the `cwd` the command ended in. Pass that `cwd` back on the next call, so a series of commands behaves like one shell session.
+- `list_sub_tools` (MCP: `list-sub-tools`) on a remote item returns this catalog without connecting to the host.
+
+The same ARA gates apply as for databases: `ara_allow_access`, input rules (the Gateway ships default rules per target type), AI validation, output rules, and an ARA session record. Remote commands need Gateway 5.6.0 or later; an older Gateway answers `unsupported secret type`. A remote call can take up to 3.5 minutes on the Gateway.
+
 ## Quick start — MCP on AgentCore
 
 ```bash

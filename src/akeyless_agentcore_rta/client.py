@@ -8,8 +8,10 @@ from typing import Any, Callable
 import akeyless
 
 from akeyless_agentcore_rta.ara import (
+    ARA_LIST_ITEM_TYPES,
     AraSecretSummary,
     is_ara_db_producer_type,
+    is_ara_remote_producer_type,
     is_ara_service_producer_type,
     map_ara_secrets,
 )
@@ -73,7 +75,7 @@ class AkeylessRtaClient:
         kwargs: dict[str, Any] = {
             "token": token,
             "filter": "",
-            "type": ["dynamic-secret", "rotated-secret", "static-secret"],
+            "type": list(ARA_LIST_ITEM_TYPES),
             "ara_only": True,
             "advanced_filter": "",
         }
@@ -139,12 +141,21 @@ class AkeylessRtaClient:
         auth_code: str | None = None,
         state: str | None = None,
     ) -> TargetQueryResult:
-        """Run a cloud/K8s/GitHub/custom-MCP action via Gateway ARA."""
+        """Run a cloud/K8s/GitHub/custom-MCP action, or a remote command on an SSH/Windows/LDAP host, via Gateway ARA.
+
+        For a remote item the payload is a plain command line, or a sub-tool call such as
+        ``{"tool":"run","arguments":{"command":"uptime","host":"web1","cwd":"/"}}``.
+        """
         resolved = self._resolve_secret_name(secret_name)
         listed = self._find_listed_secret(resolved)
-        if listed and listed.target_type and not is_ara_service_producer_type(listed.target_type):
+        if (
+            listed
+            and listed.target_type
+            and not is_ara_service_producer_type(listed.target_type)
+            and not is_ara_remote_producer_type(listed.target_type)
+        ):
             raise ValueError(
-                f'Secret "{resolved}" is not a service secret. Use query_db instead.'
+                f'Secret "{resolved}" is not a service secret or remote item. Use query_db instead.'
             )
         return self._execute_target_query(
             secret_name=resolved,
@@ -195,7 +206,7 @@ class AkeylessRtaClient:
         secret_name: str | None = None,
         agent_id: str | None = None,
     ) -> ListSubToolsResult:
-        """Discover sub-tools for a service secret (optional before service_execute)."""
+        """Discover sub-tools for a service secret or remote item (optional before service_execute)."""
         resolved = self._resolve_secret_name(secret_name)
         body = {
             "secret_name": resolved,
