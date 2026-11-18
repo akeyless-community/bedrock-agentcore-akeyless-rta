@@ -69,6 +69,16 @@ def _expiry_from_browser(
     return _expiry_from_auth_output(_Shim(str(expiration)), margin_seconds)  # type: ignore[arg-type]
 
 
+_CLOUD_ID_HINTS = {
+    "aws_iam": "On AgentCore Runtime, ensure the execution role has ambient AWS credentials.",
+    "azure_ad": "Ensure a managed identity is assigned and the Azure metadata endpoint is reachable.",
+    "gcp": (
+        "Ensure a service account is attached (GCP metadata server) or Application Default "
+        "Credentials are configured, and the google-auth package is installed (gcp extra)."
+    ),
+}
+
+
 def _get_cloud_id(config: AkeylessRtaConfig) -> str:
     if config.cloud_id and config.cloud_id.strip():
         return config.cloud_id.strip()
@@ -87,8 +97,7 @@ def _get_cloud_id(config: AkeylessRtaConfig) -> str:
     if not cloud_id or not str(cloud_id).strip():
         raise ValueError(
             f"akeyless-cloud-id returned an empty cloud ID for provider {provider!r}. "
-            "On AgentCore Runtime, ensure the execution role has ambient AWS credentials "
-            "or pass cloud_id explicitly."
+            f"{_CLOUD_ID_HINTS[provider]} Or pass cloud_id explicitly."
         )
     return str(cloud_id).strip()
 
@@ -148,7 +157,8 @@ def authenticate(api: akeyless.V2Api, config: AkeylessRtaConfig) -> AuthSession:
             access_id=config.access_id,
             access_type=access_type,
             cloud_id=_get_cloud_id(config),
-            gcp_audience=config.gcp_audience,
+            # Auth defaults gcp_audience to "akeyless.io"; None keeps it off non-GCP requests.
+            gcp_audience=config.gcp_audience if access_type == "gcp" else None,
         )
     else:
         raise ValueError(f"Unsupported access type: {access_type}")
