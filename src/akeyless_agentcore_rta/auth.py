@@ -77,7 +77,13 @@ def _get_cloud_id(config: AkeylessRtaConfig) -> str:
     if provider not in ("aws_iam", "azure_ad", "gcp"):
         raise ValueError(f"Cannot generate cloud ID for access type {provider}")
 
-    cloud_id = CloudId().generate()
+    generator = CloudId()
+    if provider == "gcp":
+        cloud_id = generator.generateGcp(audience=config.gcp_audience)
+    elif provider == "azure_ad":
+        cloud_id = generator.generateAzure()
+    else:
+        cloud_id = generator.generate()
     if not cloud_id or not str(cloud_id).strip():
         raise ValueError(
             f"akeyless-cloud-id returned an empty cloud ID for provider {provider!r}. "
@@ -142,6 +148,7 @@ def authenticate(api: akeyless.V2Api, config: AkeylessRtaConfig) -> AuthSession:
             access_id=config.access_id,
             access_type=access_type,
             cloud_id=_get_cloud_id(config),
+            gcp_audience=config.gcp_audience,
         )
     else:
         raise ValueError(f"Unsupported access type: {access_type}")

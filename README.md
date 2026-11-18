@@ -19,6 +19,8 @@ source .venv/bin/activate
 pip install -e ".[mcp,dev]"
 ```
 
+For `AKEYLESS_ACCESS_TYPE=gcp`, also install the `gcp` extra (`pip install -e ".[mcp,gcp]"`); set `AKEYLESS_GCP_AUDIENCE` if your GCP auth method does not use the default `akeyless.io`.
+
 ## Quick start — client
 
 ```python
