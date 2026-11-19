@@ -17,4 +17,11 @@ jobs:
           python-version: "3.12"
       - run: pip install build
       - run: python -m build
+      - name: Check the release tag matches the built version
+        run: |
+          built=$(python -c "import glob, re; print(re.search(r'-([^-]+)-py3', glob.glob('dist/*.whl')[0]).group(1))")
+          if [ "$built" != "${GITHUB_REF_NAME#v}" ]; then
+            echo "::error::Release tag ${GITHUB_REF_NAME} does not match built version ${built}"
+            exit 1
+          fi
       - uses: pypa/gh-action-pypi-publish@release/v1
