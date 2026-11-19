@@ -35,7 +35,7 @@ Publish `akeyless-agentcore-rta` with [trusted publishing](https://docs.pypi.org
 ## Step 3: First release
 
 ```bash
-# bump version in pyproject.toml + __init__.py if needed
+# bump __version__ in src/akeyless_agentcore_rta/__init__.py (pyproject.toml reads it)
 git tag v0.1.0
 git push origin v0.1.0
 gh release create v0.1.0 --title "v0.1.0" --notes "Initial release: ARA client + MCP for Bedrock AgentCore"

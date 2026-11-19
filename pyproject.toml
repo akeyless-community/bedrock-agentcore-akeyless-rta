@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "akeyless-agentcore-rta"
-version = "0.3.0"
+dynamic = ["version"]
 description = "Akeyless Agentic Runtime Authority (RTA/ARA) for AWS Bedrock AgentCore — secretless DB and cloud actions"
 readme = "README.md"
 license = "Apache-2.0"
@@ -63,6 +63,9 @@ akeyless-agentcore-rta-mcp = "akeyless_agentcore_rta.tools.mcp:run_mcp_server"
 [project.urls]
 Homepage = "https://github.com/akeyless-community/bedrock-agentcore-akeyless-rta"
 Repository = "https://github.com/akeyless-community/bedrock-agentcore-akeyless-rta"
+
+[tool.hatch.version]
+path = "src/akeyless_agentcore_rta/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/akeyless_agentcore_rta"]
