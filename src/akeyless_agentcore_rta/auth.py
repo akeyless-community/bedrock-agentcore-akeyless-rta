@@ -74,9 +74,11 @@ _CLOUD_ID_HINTS = {
     "azure_ad": "Ensure a managed identity is assigned and the Azure metadata endpoint is reachable.",
     "gcp": (
         "Ensure a service account is attached (GCP metadata server) or Application Default "
-        "Credentials are configured, and the google-auth package is installed (gcp extra)."
+        "Credentials are configured."
     ),
 }
+
+_CLOUD_ID_EXTRAS = {"aws_iam": "aws", "azure_ad": "azure", "gcp": "gcp"}
 
 
 def _get_cloud_id(config: AkeylessRtaConfig) -> str:
@@ -88,12 +90,19 @@ def _get_cloud_id(config: AkeylessRtaConfig) -> str:
         raise ValueError(f"Cannot generate cloud ID for access type {provider}")
 
     generator = CloudId()
-    if provider == "gcp":
-        cloud_id = generator.generateGcp(audience=config.gcp_audience)
-    elif provider == "azure_ad":
-        cloud_id = generator.generateAzure()
-    else:
-        cloud_id = generator.generate()
+    try:
+        if provider == "gcp":
+            cloud_id = generator.generateGcp(audience=config.gcp_audience)
+        elif provider == "azure_ad":
+            cloud_id = generator.generateAzure()
+        else:
+            cloud_id = generator.generate()
+    except ImportError as exc:
+        extra = _CLOUD_ID_EXTRAS[provider]
+        raise ValueError(
+            f"Generating a cloud ID for provider {provider!r} needs the {extra!r} extra: "
+            f"pip install 'akeyless-agentcore-rta[{extra}]'"
+        ) from exc
     if not cloud_id or not str(cloud_id).strip():
         raise ValueError(
             f"akeyless-cloud-id returned an empty cloud ID for provider {provider!r}. "

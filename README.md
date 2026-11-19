@@ -19,7 +19,7 @@ source .venv/bin/activate
 pip install -e ".[mcp,dev]"
 ```
 
-For `AKEYLESS_ACCESS_TYPE=gcp`, also install the `gcp` extra (`pip install -e ".[mcp,gcp]"`); set `AKEYLESS_GCP_AUDIENCE` if your GCP auth method does not use the default `akeyless.io`.
+Cloud identity auth also needs the extra for your provider: `aws` for `aws_iam` (installs `boto3`), `azure` for `azure_ad` (installs `azure-identity`) or `gcp` for `gcp` (installs `google-auth`), for example `pip install -e ".[mcp,aws]"`. For GCP, set `AKEYLESS_GCP_AUDIENCE` if your auth method does not use the default `akeyless.io`.
 
 ## Quick start — client
 

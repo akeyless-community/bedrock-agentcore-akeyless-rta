@@ -30,6 +30,15 @@ def fake_cloud_id(monkeypatch):
     monkeypatch.setattr(auth, "CloudId", _FakeCloudId)
 
 
+def _config(access_type, **overrides):
+    return config_from_env(
+        gateway_input_url="https://gw.example.com:8000",
+        access_id="p-test",
+        access_type=access_type,
+        **overrides,
+    )
+
+
 @pytest.mark.parametrize(
     ("access_type", "overrides", "expected_id", "expected_call"),
     [
@@ -40,23 +49,28 @@ def fake_cloud_id(monkeypatch):
     ],
 )
 def test_cloud_id_generator_matches_provider(access_type, overrides, expected_id, expected_call):
-    cfg = config_from_env(
-        gateway_input_url="https://gw.example.com:8000",
-        access_id="p-test",
-        access_type=access_type,
-        **overrides,
-    )
-    assert auth._get_cloud_id(cfg) == expected_id
+    assert auth._get_cloud_id(_config(access_type, **overrides)) == expected_id
     assert _FakeCloudId.calls == [expected_call]
 
 
-def _config(access_type, **overrides):
-    return config_from_env(
-        gateway_input_url="https://gw.example.com:8000",
-        access_id="p-test",
-        access_type=access_type,
-        **overrides,
-    )
+@pytest.mark.parametrize(
+    ("access_type", "extra"),
+    [("aws_iam", "aws"), ("azure_ad", "azure"), ("gcp", "gcp")],
+)
+def test_missing_provider_package_names_the_extra(monkeypatch, access_type, extra):
+    class _Missing(_FakeCloudId):
+        def generate(self, *args, **kwargs):
+            raise ModuleNotFoundError("No module named 'boto3'")
+
+        def generateAzure(self, object_id=""):  # noqa: N802
+            raise ModuleNotFoundError("No module named 'azure'")
+
+        def generateGcp(self, audience="akeyless.io"):  # noqa: N802
+            raise ModuleNotFoundError("No module named 'google'")
+
+    monkeypatch.setattr(auth, "CloudId", _Missing)
+    with pytest.raises(ValueError, match=rf"akeyless-agentcore-rta\[{extra}\]"):
+        auth._get_cloud_id(_config(access_type))
 
 
 @pytest.mark.parametrize(

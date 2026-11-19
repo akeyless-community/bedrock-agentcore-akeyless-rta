@@ -31,6 +31,14 @@ mcp = [
     # FastMCP lives in mcp 1.x; mcp 2.x renames it to MCPServer.
     "mcp>=1.9.0,<2",
 ]
+aws = [
+    # akeyless-cloud-id's generate imports boto3 but does not declare it.
+    "boto3>=1.28.0",
+]
+azure = [
+    # akeyless-cloud-id's generateAzure imports azure-identity but does not declare it.
+    "azure-identity>=1.15.0",
+]
 gcp = [
     # akeyless-cloud-id's generateGcp imports google-auth but does not declare it.
     "google-auth>=2.20.0",
