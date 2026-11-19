@@ -147,6 +147,7 @@ sequenceDiagram
 
 | Guide | Description |
 |-------|-------------|
+| [User guide](docs/USER_GUIDE.md) | End to end: Akeyless setup, deploy on AgentCore, connect an agent, audit |
 | [Akeyless setup](docs/AKEYLESS_SETUP.md) | Auth method, ARA RBAC, chicken-and-egg IAM bind |
 | [AgentCore deploy](docs/AGENTCORE_DEPLOY.md) | MCP protocol, envVars, invoke |
 | [Security](SECURITY.md) | Checklist |

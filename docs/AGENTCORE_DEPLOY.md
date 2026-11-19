@@ -17,26 +17,29 @@ Map into `agentcore.json` / Runtime env (no application secrets):
 
 ## Entry point
 
-Use `examples/mcp-server/server.py`:
+Use `examples/mcp-server/server.py` as the runtime's `main.py`. With AgentCore CLI 1.x:
 
 ```bash
-agentcore configure -e examples/mcp-server/server.py --protocol MCP
+agentcore create --name MyRta --template agent-python-minimal
+cd MyRta
+cp /path/to/examples/mcp-server/server.py app/agent/main.py
+# in agentcore/agentcore.json, on the runtime: "protocol": "MCP", "authorizerType": "AWS_IAM", envVars as above
 agentcore deploy
 ```
 
-Install dependency (once on PyPI, or path/editable for local testing):
+See the [user guide](USER_GUIDE.md) for the full `agentcore.json` runtime entry.
+
+Add the dependency to `app/agent/pyproject.toml`:
 
 ```text
-akeyless-agentcore-rta[mcp,aws]
+akeyless-agentcore-rta[mcp,aws]>=0.3.0
 ```
 
 The `aws` extra installs `boto3`, which the `aws_iam` cloud ID needs.
 
-Until published, vendor the package into the agent image or install from a private index / local path your build allows (AgentCore `uv` may reject `git+https` source builds — prefer a wheel).
-
 ## After deploy
 
-1. Bind the AgentCore execution role ARN on the Akeyless AWS IAM auth method.
+1. Bind the AgentCore execution role on the Akeyless AWS IAM auth method (`--bound-role-name`), then attach the Akeyless role to it.
 2. Invoke the MCP runtime and call `list-secrets`.
 3. Run a read-only `query-db` only with approval if the payload can change data or incur cost.
 

@@ -22,7 +22,7 @@ akeyless auth-method create aws-iam \
   --bound-aws-account-id <account-id>
 ```
 
-AgentCore creates the execution role ARN on **first deploy**. Start with a broader bind (account / later-tightened role ARN), deploy once, then restrict `--bound-aws-role-arn` to the AgentCore role. Same chicken-and-egg as the secrets runtime package.
+AgentCore creates the execution role on **first deploy**. Start with an account-wide bind, deploy once, then restrict the auth method to the AgentCore role with `akeyless auth-method update aws-iam --bound-role-name <role-name>`. Attach the Akeyless role to the auth method only after that, so no other principal in the account can use it in between. Same chicken-and-egg as the secrets runtime package.
 
 Local testing can use `access_key` against the same Gateway.
 
