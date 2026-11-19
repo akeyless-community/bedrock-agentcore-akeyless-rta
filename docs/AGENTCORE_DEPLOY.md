@@ -27,8 +27,10 @@ agentcore deploy
 Install dependency (once on PyPI, or path/editable for local testing):
 
 ```text
-akeyless-agentcore-rta[mcp]
+akeyless-agentcore-rta[mcp,aws]
 ```
+
+The `aws` extra installs `boto3`, which the `aws_iam` cloud ID needs.
 
 Until published, vendor the package into the agent image or install from a private index / local path your build allows (AgentCore `uv` may reject `git+https` source builds — prefer a wheel).
 

@@ -25,6 +25,7 @@ API_V2_SUFFIX = "/api/v2"
 DEFAULT_AGENT_ID = "bedrock-agentcore"
 DEFAULT_MCP_ID = "akeyless-agentcore-rta"
 DEFAULT_TOKEN_EXPIRY_MARGIN_SECONDS = 60
+DEFAULT_GCP_AUDIENCE = "akeyless.io"
 PUBLIC_SAAS_HOST = "api.akeyless.io"
 
 
@@ -125,6 +126,7 @@ class AkeylessRtaConfig:
     token: str | None = None
     cloud_id: str | None = None
     cloud_provider: CloudProvider | None = None
+    gcp_audience: str = DEFAULT_GCP_AUDIENCE
     agent_id: str = DEFAULT_AGENT_ID
     mcp_id: str = DEFAULT_MCP_ID
     default_secret_name: str | None = None
@@ -181,6 +183,11 @@ def config_from_env(**overrides: object) -> AkeylessRtaConfig:
         token=overrides.get("token") or _read_env("AKEYLESS_TOKEN"),  # type: ignore[arg-type]
         cloud_id=overrides.get("cloud_id") or _read_env("AKEYLESS_CLOUD_ID"),  # type: ignore[arg-type]
         cloud_provider=cloud_provider,  # type: ignore[arg-type]
+        gcp_audience=str(
+            overrides.get("gcp_audience")
+            or _read_env("AKEYLESS_GCP_AUDIENCE")
+            or DEFAULT_GCP_AUDIENCE
+        ),
         agent_id=str(
             overrides.get("agent_id") or _read_env("AKEYLESS_AGENT_ID") or DEFAULT_AGENT_ID
         ),
